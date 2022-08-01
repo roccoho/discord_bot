@@ -1,0 +1,24 @@
+{
+    "events": [
+        {
+            "desc": "<@[0]> ate a poisonous berry and died.",
+            "players": 1,
+            "sur": []
+        },
+        {
+            "desc": "<@[0]> gets sniped by <@[1]>.",
+            "players": 2,
+            "sur": [1]
+        },  
+        {
+            "desc": "<@[0]> bombs <@[1]> and <@[2]>'s base.",
+            "players": 3,
+            "sur": [0]
+        }, 
+        {
+            "desc": "<@[0]> found <@[1]> and they agreed to team up.",
+            "players": 2,
+            "sur": [0, 1]
+        }   
+    ]
+}
