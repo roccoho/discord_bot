@@ -17,10 +17,9 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBit
 
 // When the client is ready, run this code (only once)
 client.once('ready', () => {
+    // console.log(fs.existsSync('./videos'));
 	console.log('Ready!');
 });
-
-
 
 client.on('interactionCreate', async interaction => {
 	if (!interaction.isChatInputCommand()) return;
@@ -94,24 +93,26 @@ client.on('interactionCreate', async interaction => {
         
     }
     else if (commandName === 'download'){  
-        const url = options.getString('url');    
-        user_id = interaction.user.id;
+        const url = options.getString('url');  
         await interaction.reply({content: `Download queued. You will be tagged once the download completes.`});
+        let user_id = interaction.user.id; 
         try{ 
-            let dl_err = await download(url);  
-            if (dl_err === 'success'){
-                file = get_vid(user_id); 
-                await interaction.followUp({content: `<@${user_id}>`, files: [file]});  
-                fs.unlinkSync(file); 
-            }
-            else if (dl_err === 'invalid_url'){  
+            let dl_err = await download(url);   
+            console.log(`\ndl_err: ${dl_err}\n`);
+            if (dl_err === 'invalid_url'){  
                 await interaction.followUp({content: `Invalid url <@${user_id}>`});  
             }
-            if (dl_err === 'file_too_large'){ 
+            else if (dl_err === 'file_too_large'){ 
                 await interaction.followUp({content: `Video file too large <@${user_id}>`}); 
             }
             else if (dl_err === 'uncatched_cmd_line_err' || dl_err === 'false_success'){ 
                 await interaction.followUp({content: `Download failed <@${user_id}>... idk why girl... ask the dev`});  
+            }
+            else{
+                // file = get_vid(user_id);  
+                file = `./${dl_err}`;
+                await interaction.followUp({content: `<@${user_id}>`, files:[file]});  
+                fs.unlinkSync(file); 
             }
         } 
         catch(err){    
@@ -119,29 +120,14 @@ client.on('interactionCreate', async interaction => {
             console.log(err);
             await interaction.followUp({content: `Download failed <@${user_id}>... idk why girl... ask the dev`}); 
         }
-
     }
-
-
 });
 
-function get_vid(user_id){ 
-    let files = fs.readdirSync('./videos/');  
-    let file = files.filter(vid => split_filename(vid) === user_id); 
-    return `videos/${file[0]}`;
-}
-
-function split_filename(filename){
-    let split_file = filename.split('_');
-    let file_user_id = split_file[split_file.length-1].split('.')[0]; 
-    return file_user_id;
-}
-
 async function download(url){  
-    if(/youtube.com\/watch.+t=[0-9]+s/.test(url)){
-        url = reformat_url(url);
-    }
-    let shell_cmd = `youtube-dl -f "mp4" --max-filesize "8M" -o "/videos/%(title).100s_${user_id}.%(ext)s" --restrict-filenames ${url}`; 
+    // if(/youtube.com\/watch.+t=[0-9]+s/.test(url)){
+    //     url = reformat_url(url);
+    // }
+    let shell_cmd = `youtube-dl -f "mp4" --max-filesize "8M" -o "%(title).100s-%(id)s.%(ext)s" --restrict-filenames ${url}`; ///videos/
     
     try{
         const promise = exec(shell_cmd);
@@ -153,11 +139,12 @@ async function download(url){
             console.log('stderr: ' + data);
         });
         const { stdout, stderr } = await promise;  
-        let last_line = stdout.split(/\r?\n/); 
-        if (/100.0%/.test(last_line[last_line.length-2])){ 
-            return 'success';
+        // let last_line = stdout.split(/\r?\n/); 
+        if (/100(\.0)?%/.test(stdout)){  //last_line[last_line.length-2]
+            dest = stdout.split(/\s+/).filter(dest => /.mp4$/.test(dest));
+            return dest;
         }
-        else if (/Aborting./.test(last_line[last_line.length-2])){
+        else if (/Aborting./.test(stdout)){
             return 'file_too_large';
         }
         else{
@@ -167,13 +154,34 @@ async function download(url){
     catch(err){  
         console.log(`\n\nshell command error:`);
         console.error(err);
-        if(/^WARNING: Could not send HEAD request to/.test(err['stderr'])){
+        if (/100(\.0)?%/.test(err['stdout'])){  
+            dest = err['stdout'].split(/\s+/).filter(dest => /.mp4$/.test(dest));
+            return dest;
+        }
+        else if (/Aborting./.test(err['stdout'])){
+            return 'file_too_large';
+        }
+        else if(/^WARNING: Could not send HEAD request to/.test(err['stderr'])){
             return 'invalid_url';
         }
         else{ 
             return 'uncatched_cmd_line_err';
         }
     } 
+}
+
+function get_vid(user_id){ 
+    let files = fs.readdirSync('videos/');  
+    console.log(`files: ${files}`);
+    let file = files.filter(vid => split_filename(vid) === user_id); 
+    return `videos/${file[0]}`;
+}
+
+function split_filename(filename){
+    let split_file = filename.split('_');
+    let file_user_id = split_file[split_file.length-1].split('.')[0];  
+    console.log(`file_user_id: ${file_user_id}`);
+    return file_user_id;
 }
 
 function reformat_url(url){
@@ -194,7 +202,6 @@ function randomEle(arr){
     return arr[Math.floor(Math.random()*arr.length)];
 }
 
-
 function handleEvent(ev, temp_player) {
     desc = ev['desc'];
     surv = [];
@@ -206,7 +213,6 @@ function handleEvent(ev, temp_player) {
     })
     return {desc, surv};
 }
-
 
 // Login to Discord with your client's token
 client.login(token);
