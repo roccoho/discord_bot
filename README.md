@@ -11,4 +11,5 @@ Dockerfile deployed in fly.io (Heroku no longer in use)
 **Improvements**
 - Temporary channel mute for members who have died
 - Cornucopia/Day 1 events
-- Downloads for tiktok
+- Downloads for tiktok & twitch clips
+- Crop with timestamps
